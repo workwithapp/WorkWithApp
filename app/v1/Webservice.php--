@@ -1,0 +1,303 @@
+<?php
+namespace App\v1;
+
+use File;
+use DB;
+use Mail;
+use Auth;
+use fileupload\FileUpload;
+use Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Model;
+
+class Webservice extends Model 
+{
+
+    /************************************/
+    /******** Get userID from Token *****/
+    /************************************/
+  public function getUserIdFromToken($token){
+    
+    $getUsers = DB::table('users')
+                ->where('token', $token)
+                ->select('id')
+                ->first();
+
+    if($getUsers){
+      return $getUsers->id;
+    }
+
+    return 0;
+  }
+
+    /********************************/
+    /* Suggestons used by  user ----*/
+    /********************************/
+  public function getSuggestionUsed($userId){
+    
+    $getCountSuggestion = DB::table("user_suggestion")
+                        ->where("user_id",$userId)
+                        ->first();
+
+    if(empty($getCountSuggestion)){
+
+      return 0;
+
+    }else{
+
+      return $getCountSuggestion->suggesion_count;
+
+    }
+  }
+
+    /******************************************/
+    /****************New Matching Req-------------*/
+    /******************************************/
+  public function insertMatching($userId,$matching_user_id,$status){
+    
+    $checkAlreadyMatch = DB::table("matches")
+                        ->where("user_id",$userId)
+                        ->where("other_user_id",$matching_user_id)
+                        ->where("status",$status)
+                        ->first();
+
+    if(isset($checkAlreadyMatch) && !empty($checkAlreadyMatch)){
+
+      return '409';
+
+    }else{
+
+      $checkStatus = DB::table("matches")
+                        ->where("user_id",$userId)
+                        ->where("other_user_id",$matching_user_id)
+                        ->select("id")
+                        ->first();
+
+      if($checkStatus){
+        
+        $matchTableId = $checkStatus->id;
+        DB::table("matches")->update(['status' => $status, 'updated_at' => date("Y-m-d H:i:s")]);
+
+      }else{
+
+        DB::table("matches")->insert(['user_id' => $userId, "other_user_id" => $matching_user_id, "status" => $status, 'updated_at' => '', 'created_at' => date("Y-m-d H:i:s") ]);
+      }
+      
+      return '200';
+    }                    
+  }
+    
+    /**********************************/
+    /********Blocked Users*************/
+    /***********************************/
+  public function getBlockedUsers($userId){
+
+    $getBlockedUser = DB::table("blocks")
+                        ->where("user_id",$userId)
+                        ->where("status",0)
+                        ->select(DB::raw('group_concat(other_user_id) as blocked_users'))
+                        ->first();
+
+    $blockedUsers = array();
+
+    if(isset($getBlockedUser) && !empty($getBlockedUser->blocked_users)) {
+      $blockedUsers = explode(',',$getBlockedUser->blocked_users);
+    }
+
+    return $blockedUsers;
+  }
+
+    /***********************************/
+    /* User interest**/
+    /**********************************/
+  public function getSuggestedUserInterests($userId){
+    
+    return DB::table("user_interests")
+              ->join("interests","interests.id","=","user_interests.interest_id")
+              ->where('user_id',$userId)
+              ->select("interests.id",'interests.name')
+              ->get();
+  }
+
+    /***************************************************/
+    /******suggestonUsed(increase 1 limit)
+    /***************************************************/
+  function suggestonUsed($userId){
+    
+    $getCountSuggestion = DB::table("user_suggestion")
+                        ->where("user_id",$userId)
+                        ->first();
+
+    if(empty($getCountSuggestion)){
+
+      $suggestionUsed = 1;
+      DB::table("user_suggestion")->insert(['user_id' =>$userId, "suggesion_count" => $suggestionUsed]);
+    
+    }else{
+
+      $suggestionUsed = $getCountSuggestion->suggesion_count+1;
+      
+      if($suggestionUsed == "10"){
+        
+        $NewDate = date('Y-m-d H:i:s', strtotime("+1 days"));
+        DB::table("user_suggestion")->where('user_id',$userId)->update(["suggesion_count" => $suggestionUsed,"next_suggesion_date" => $NewDate]);
+       
+      }else{
+
+        DB::table("user_suggestion")->where('user_id',$userId)->update(["suggesion_count" => $suggestionUsed]);
+      }
+    }
+  }
+
+
+	  /*********************************
+    // Get Single User
+    *********************************/
+  public function getusers($user_id){
+
+	  $getUsers=DB::table('users')
+	              ->where('id',$user_id)
+	              ->select('*')
+	              ->first();
+	  return $getUsers;
+  }
+
+
+      /*-*******************************/
+      /*  Suggested USed Details----*/
+      /**********************************/
+  public function getSuggestedUserDetails($suggested_id){
+    
+    $profile = url('/').'/public/uploads/profile/';
+    $dummyProfile = $profile.'dummyprofile.jpg';
+
+    $getUsers=DB::table('users')
+                ->leftJoin("workplaces","workplaces.id" ,'=', "users.work_place")
+                ->leftJoin("times","times.id","=","users.time")
+                ->leftJoin("days","days.id","=","users.day")
+                ->where('users.id',$suggested_id)
+                ->select('users.id',DB::raw("CASE WHEN profile_pic = '' OR profile_pic is null THEN '".$dummyProfile."' ELSE CONCAT('". $profile ."', profile_pic) END as profile_pic"),'users.email','users.name','users.gender','users.dob','users.job_title','users.bio','workplaces.name as workplace_name','users.project','days.days as desired_work_days','times.name   as desired_work_time')
+                ->first();
+
+    return $getUsers;
+  }
+
+  	/***********************************/
+  	// Update login token
+  	/***********************************/
+  public function UpdateLoginToken($id,$token_key,$deviceType,$deviceId){
+    
+    $UpdateDetailObj = DB::table('users')
+              						->where('id',$id)
+              						->limit(1)  
+              						->update(array('token' =>$token_key,'device_id'=>$deviceId,'device_type'=>$deviceType));
+
+		return $UpdateDetailObj;
+  }
+
+  	/***********************************/
+  	// Get Password Token 
+  	/***********************************/
+	public function GetPasswordToken($password_token,$user_id){
+
+    $result_data = DB::table('users')
+              			  ->where('password_token',$password_token)
+              			  ->where('id',$user_id)
+              			  ->select('*')
+              			  ->first();
+
+		return $result_data;
+	}
+
+
+    /***********************************/
+    /* Insert Data */
+    /***********************************/
+  Public function insertdata($tablename,$data){
+  	
+    $result=DB::table($tablename)->insert($data);
+    return $result;
+
+  }
+
+    /***********************************/
+    /* update Data */
+    /***********************************/
+  Public function addprofile($tablename,$data){
+
+  	$result=DB::table($tablename)->update($data);
+    return $result;
+
+  }
+
+    /************************************/
+    /* Check Connection */
+    /**************************************/    
+  public function checkConnection($sender_id,$receiver_id){
+    
+    $checkConnection = DB::table('connection')
+                            ->where([['sender_id','=',"$sender_id"],['reciver_id','=',"$receiver_id"]])
+                            ->orwhere([['sender_id','=',"$receiver_id"],['reciver_id','=',"$sender_id"]])
+                            ->first();
+    return  $checkConnection;
+  }
+
+  public function getProfile($user_id){
+
+    $data = DB::table('users as u')->leftJoin('days as d', 'd.id', '=', 'u.day')->leftJoin('times as t', 't.id', '=', 'u.time')->select('u.*','d.name as day_name','t.name as time_name', DB::raw("CASE WHEN u.profile_pic is NULL OR u.profile_pic = '' THEN CONCAT('',u.profile_pic) ELSE CONCAT('".url('/').'/public/uploads/profile/'."',u.profile_pic) END AS profile_pic"))->where(['u.id' => $user_id])->first();
+
+    if($data){
+
+      $data->work_place = DB::table('user_workplaces as u')->join('workplaces as w', 'u.workplace_id', '=', 'w.id')->where(['u.user_id' => $user_id, 'u.status' => '1'])->select('w.name','w.id')->get();
+
+      $data->interest = DB::table('user_interests as u')->join('interests as w', 'u.interest_id', '=', 'w.id')->where(['u.user_id' => $user_id, 'u.status' => '1'])->select('w.name','w.id')->get();
+    
+    }
+
+    return $data;
+  }
+
+    /*********************/
+    /* subscriptionPlan */
+    /*********************/
+  public function subscriptionPlan(){
+
+    $result = DB::table('subscription_plans')->get();
+    return $result;
+  }
+
+
+    /*********************/
+    /***** blockUser *****/
+    /*********************/
+  public function blockUser($data){
+    
+        $check  =  DB::table('blocks')->where('user_id',$data['user_id'])
+                    ->where('other_user_id',$data['other_user_id'])->first();
+        if(empty($check)){
+
+            DB::table('blocks')->insert($data);
+
+        }else{
+
+            DB::table('blocks')->where('other_user_id',$data['other_user_id'])
+                ->where('user_id',$data['user_id'])->update(['status'=>$data['status']]);
+        }
+
+  }
+
+      /* Report USer------*/
+  function reportUser($userId,$other_user_id,$reportMessage){
+
+    $checkAlready = DB::table("report_users")->where("user_id",$userId)->where("other_user_id",$other_user_id)->select("id")->first();
+
+    if(empty($checkAlready)){
+
+      DB::table("report_users")->insert(['user_id' => $userId, 'other_user_id' => $other_user_id, 'message' => $reportMessage, 'created_at' => date('Y-m-d H:i:s'),'updated_at' => date('Y-m-d H:i:s') ]);
+    
+    }
+
+    return true;
+  }
+
+}

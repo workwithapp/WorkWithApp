@@ -1,0 +1,1319 @@
+<?php
+namespace App\Http\Controllers\v1;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Input;
+use Illuminate\Support\Facades\View;
+use App\User;
+use Auth;
+use DB;
+use Crypt;
+use Mail;
+use DateTime;
+use File;
+use Response;
+use Carbon\Carbon;
+use App\v1\Webservice;
+use App\notification;
+
+class UserController extends Controller
+{
+
+  private $required_field_error = "Please fill all fields!";
+  private $unauthorized         = array('message' => 'Email or password is incorrect');
+  private $logoutSuccess        = array('message' => 'You are logged out successfully');
+  private $tokenExpire          = array('message' => 'Authentication failed');
+  private $badRequest           = array('message' => 'Request failed');
+  private $updateapp            = array('message' => 'An updated version of Workwith is available. Please update unless your application will not work.');
+  private $emailrequest         = array('message' => 'Email has already been taken.');
+  private $emailnotregister     = array('message' => 'The email is not registered with us.');
+   
+  public function __construct(Request $req){
+
+    $this->webservice = new Webservice;
+
+    header("Access-Control-Allow-Origin: *");
+    header("Access-Control-Allow-Methods: PUT, GET, POST");
+    header("Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept");
+
+    /*$version      = $req->header('version');
+    $device_type  = $req->header('devicetype');
+
+
+    if($version <= 2 && $device_type == 'A'){
+
+      echo json_encode(array('status' => 426, 'message' => 'An updated version  of Touchmassage is available please update unless your application will not work.'));
+      die;
+
+    }elseif($version <= 2.0 && $device_type == 'I'){
+
+      echo json_encode(array('status' => 426, 'message' => 'An updated version of Touchmassage is available please update unless your application will not work.'));
+      die;
+
+    }*/
+
+  } //end of constructor
+
+
+
+  	/****************************************/
+  	/*Get All Interest*/
+  	/**************************************/
+  public function getInterests(){
+
+  	$interests = DB::table('interests')->where('status',1)->select('id','name')->get();
+    
+    if (!$interests) {
+      return response(array('message' => 'Session expired!.Please login again.'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }else{
+       return response(array('data' => $interests), SUCCESS)->header('Content-Type', 'application/json');
+    }
+  }
+
+
+      /********************************/
+      /* RANDOM STRING GENERATE 
+      /********************************/
+  function generateRandomString($length) {
+    
+    $pool = array_merge(range(0,9),range('A', 'Z'));
+      
+    for($i=0; $i < $length; $i++){
+      @$key .= $pool[mt_rand(0, count($pool) - 1)];
+    }
+
+    $ran   = md5(uniqid(rand(), true));  
+    $srtrs = round(microtime(true));
+    return $key.substr($ran,3,3).substr($srtrs,3,3);
+  }
+
+      /***************************************/
+      /* FUNCTION FOR CHECK TOKEN EXPIRED OR NOT
+      /***************************************/
+  function GetCheckToken($user,$login_token)
+  {
+    $user = DB::table('users')->where('id','=',$user)->where('token','=', $login_token)->select('id')->first();
+    
+    if (!$user) {
+      return response(array('message' => 'Session expired!.Please login again.'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }else{
+      return true;
+    }
+
+  }  
+
+      /***********************************************/
+      /* FUNCTION FOR CHECK User Login Another Device
+      /***********************************************/
+  function UserLoginanotherDevice($user,$token)
+  {
+    $user = DB::table('users')->where('id','=',$user)->where('token','=', $token)->select('id')->first();
+    
+    if (!$user) {
+
+      echo json_encode(array('status' => 401, 'message' => 'It seems like you have logged in from another device. Please sign in again.'));
+      die;
+
+    }else{
+
+      return true;
+    }
+  }
+    
+      /********************************/
+      /* Signup 
+      /********************************/
+  public function signup(Request $req){
+
+    $validator = Validator::make($req->all(), [  
+                'email'                     => 'required',
+                'password'                  => 'required']);
+
+    if ($validator->fails()) {
+
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+
+    }else{
+      
+      $User = new User;
+      $get_user  = DB::table('users')->where('email',$req->input('email'))->where('register_type','O')->first();
+      $token_key = $this->generateRandomString(10);
+      
+      if(empty($get_user)){
+
+        $User->email              = $req->input('email');
+        $User->device_type        = $req->input('device_type');
+        $User->device_id          = $req->input('device_id');
+        $User->token              = $token_key;
+        $User->version            = $req->input('version');
+        $User->password           = Hash::make($req->input('password'));
+        
+        $User->save();                
+        $id = $User->id;
+
+        $datas = DB::table('users')->where('id',$id)->select('id','email','token','device_id','device_type')->first();
+              
+        return response(array('data'=>$datas),SUCCESS)->header('Content-Type','application/json');           
+      }else{
+
+        return response($this->emailrequest, SUCCESS)->header('Content-Type', 'application/json'); 
+      
+      }
+    }
+  }
+
+  public function socialSignup(Request $req){
+
+    $validator = Validator::make($req->all(), [  
+              'social_id'                 => 'required',
+              'register_type'             => 'required']);
+
+    if ($validator->fails()) {
+
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+
+    }else{
+      
+      $User = new User;
+      $get_user  = DB::table('users')->where('social_id', $req->social_id)->where('register_type', $req->register_type)->first();
+      $token_key = $this->generateRandomString(10);
+
+      if(empty($get_user)){
+
+        $User->email              = $req->input('email', '');
+        $User->device_type        = $req->input('device_type', '');
+        $User->device_id          = $req->input('device_id', '');
+        $User->register_type      = $req->input('register_type', '');
+        $User->token              = $token_key;
+        $User->version            = $req->input('version', '1.0');
+        $User->social_id          = $req->input('social_id', '');
+        
+        $User->save();                
+        $id = $User->id;
+
+        $datas = DB::table('users')->where('id',$id)->select('id','email','token','device_id','device_type')->first();
+              
+        return response(array('data' => $datas), SUCCESS)->header('Content-Type','application/json');           
+      }else{
+
+        $this->webservice->UpdateLoginToken($get_user->id,$token_key,$req->device_type,$req->device_id);
+         
+        $datas = User::find($get_user->id);
+
+        return response(array('data' => $datas), SUCCESS)->header('Content-Type', 'application/json');
+      }
+    }
+  }
+
+    
+    /********************************/
+    /* Login 
+    /********************************/
+  public function login(Request $req)
+  {
+    $email      = $req->input('email');
+    $password   = $req->input('password');
+    $deviceId   = $req->input('device_id');
+    $deviceType = $req->input('device_type');
+
+    $validator  = Validator::make($req->all(), [  
+                    'email'         => 'required',
+                    'password'      => 'required']);
+
+    if ($validator->fails()) {          
+      
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+
+    }else{
+ 
+      if (Auth::attempt(['email' => "$email", 'password' => "$password"])){
+        $userId = Auth::id();
+        $data   = User::find($userId);
+
+        $resultstatus=$this->webservice->getusers($data->id);
+        
+        $token_key   = $this->generateRandomString(10);
+        $this->webservice->UpdateLoginToken($data->id,$token_key,$deviceType,$deviceId);
+         
+        $datas = User::find($data->id);
+        return response(array('data'=>$datas), SUCCESS)->header('Content-Type', 'application/json');
+
+      }else{
+        return response($this->unauthorized, UNAUTHORIZED)->header('Content-Type', 'application/json');
+      }
+    }
+  }
+
+    
+    /********************************/
+    /* Logout
+    /********************************/
+  public function logout(Request $req){
+
+    $validator = Validator::make($req->all(),[
+                  'user_id'       => 'required']);   
+
+    if ($validator->fails()) {
+
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+
+    }else{
+
+      $rememberToken = $req->token;
+      $this->GetCheckToken($req->user_id,$rememberToken);
+      $User = new User();
+      $User = User::find($req->input('user_id')); 
+      $User->token = '';
+      $User->device_id   = '';
+      $User->device_type = '';
+
+      if($User->save()){
+
+        return response($this->logoutSuccess, SUCCESS)->header('Content-Type', 'application/json');
+      
+      }else{
+        return response($this->unauthorized, NOT_ACCEPTABLE)->header('Content-Type', 'application/json');
+      } 
+    }
+  }
+
+
+    /********************************/
+    /* Get Interest List
+    /********************************/
+  public function getInterest(){
+
+    $interest = DB::table('interests')->where('status', '1')->get(); 
+   
+    if($interest){
+
+      return response(['message' => 'Get interest successfully.', 'data' => $interest], SUCCESS)->header('Content-Type', 'application/json');
+    
+    }else{
+
+      return response(['message' => 'No result found'], NO_CONTENT)->header('Content-Type', 'application/json');
+    
+    } 
+  }
+
+
+
+ public function getWorkplace(){
+
+    $workplace = DB::table('workplaces')->where('status', '1')->get(); 
+   
+    if(!$workplace->isEmpty()){
+
+      return response(['message' => 'Get workplace successfully.', 'data' => $workplace], SUCCESS)->header('Content-Type', 'application/json');
+    
+    }else{
+
+      return response(['message' => 'No result found'], NO_CONTENT)->header('Content-Type', 'application/json');
+    
+    } 
+  }
+
+    /********************************/
+    /* Get Days List
+    /********************************/
+  public function getDays(){
+
+    $day = DB::table('days')->where('status', '1')->get(); 
+
+    if(!$day->isEmpty()) {
+      return response(['message' => 'Get days successfully.', 'data' => $day], SUCCESS)->header('Content-Type', 'application/json');
+    
+    }else{
+
+      return response(['message' => 'No result found'], NO_CONTENT)->header('Content-Type', 'application/json');
+    
+    } 
+  }
+
+    /********************************/
+    /* Get Time List
+    /********************************/
+  public function getTimes(){
+
+    $time = DB::table('times')->where('status', '1')->get(); 
+   
+    if(!$time->isEmpty()){
+
+      return response(['message' => 'Get time successfully.', 'data' => $time], SUCCESS)->header('Content-Type', 'application/json');
+    
+    }else{
+
+      return response(['message' => 'No result found'], NO_CONTENT)->header('Content-Type', 'application/json');
+    
+    } 
+  }
+   
+      /********************************/
+      /* Forgot Password API
+      /********************************/
+  public function forgotPassword(Request $req)
+  {
+
+    $email    = $req->email;
+
+    if($email)
+    {
+      $user = DB::table('users')->where('email',$email)->where('register_type', 'O')->first();
+
+      if($user){
+
+        $password_token = $this->generateRandomString(10);
+
+        $update_user_data = DB::table('users')->where('email',$email)->where('register_type', 'O')
+              ->update(array('password' => Hash::make($password_token)));
+
+        $content = "Please use this password for login into the app :- ".$password_token; 
+
+        Mail::send(array(), array(), function ($message) use ($content,$email) 
+        {
+          
+          $from  = 'info@workwith.com';
+          $message->to($email ,'Forgot Password')
+                  ->subject('Request for change password')
+                  ->setBody($content, 'text/html');
+
+        });
+
+        return response(array('message' => 'Please check your mail address to reset your password'), SUCCESS)->header('Content-Type', 'application/json');  
+
+      }else{
+        return response($this->emailnotregister, BAD_REQUEST)->header('Content-Type', 'application/json');
+      }
+    
+    }else{
+
+      return response(array('message' => 'Please enter email address.'), BAD_REQUEST)->header('Content-Type', 'application/json');
+
+    }
+  }
+
+
+    /**************************************
+     Reset password when user click 
+     on click from mail 
+    ***********************************/  
+
+  public function resetPasswordForm($token)
+  {
+      $tokenn = explode("-", $token);
+      $user_id=$tokenn[2];
+      $password_token=$tokenn[3];
+      $error= '';
+  
+     $result_data = $this->webservice->GetPasswordToken($password_token,$user_id);
+
+    if(!$result_data){
+      $error = 'Password token has been expired!!';
+      
+    }
+     return View::make('emails.resetpasswordform', ['error' => $error,'token' => $password_token,'user_id'=>$user_id]);
+  }
+
+
+  /************************************
+     Set New password after fill the
+     reset password form by user
+  **************************************/
+
+  public function setNewPassword()
+  {
+    $password_token   = htmlspecialchars(trim(Input::get('token')));
+    $user_id          = htmlspecialchars(trim(Input::get('user_id')));
+    $password         = htmlspecialchars(trim(Input::get('password')));
+    $repeat_password  = htmlspecialchars(trim(Input::get('repeat_password')));
+
+      $result_data = $this->webservice->GetPasswordToken($password_token,$user_id);      
+    if($result_data && $password_token !='')
+    {
+      if($password == $repeat_password && $password != '' && $repeat_password != '')
+      { 
+        $UpdateDetailObj = DB::table('users')
+         ->where('id',$user_id)
+         ->limit(1)
+         ->update(array('password' =>Hash::make($password),'password_token' =>''));
+      
+      $message = "Password Reset Successfully!";      
+      return View::make('emails.resetpasswordform', ['message' => $message]);
+
+      }else{
+
+        $error = "Password Not Match!";
+        $password_token = $password_token;
+
+        return View::make('emails.resetpasswordform', ['error' => $error,'token' => $password_token,'user_id'=>$user_id]); 
+      }
+
+    }else{     
+      $expire_token = "Password token expired! Please resend mail to get new token.";
+        return View::make('emails.resetpasswordform', ['expire_token' => $expire_token]);    
+    }
+  }
+
+    /**************************************/
+    /* Create profile api */
+    /**************************************/
+  public function createProfile(Request $req){
+
+    $validator = validator::make($req->all(),[
+                'name'              => 'required',
+                'dob'               => 'required',
+                'bio'               => 'required',
+                'job_title'         => 'required', 
+                'project'           => 'required', 
+                'interest'          => 'required']); 
+            
+    if ($validator->fails()) {          
+               
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+    
+    }else{
+
+    	if($req->headers->has('token')){
+    	  $token = $req->header('token'); 
+    	}else{
+    	  $token = $req->get('token'); 
+    	}
+
+      $userId = $this->webservice->getUserIdFromToken($token);
+     
+      if(!$userId){/* check user id with token valid'--*/
+        
+        return response(array('error'=>'Invalid Token'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+      }
+
+      $req->user_id = $userId;
+
+      $data = array(
+                  'name'        =>  $req->name,
+                  'gender'      =>  $req->gender,
+                  'dob'         =>  $req->dob,
+                  'bio'         =>  $req->bio,
+		              'job_title'   =>  $req->job_title,
+                  'project'     =>  $req->project,
+                  'day'         =>  $req->day,
+                  'time'        =>  $req->time,
+                  'updated_at'  =>  date("Y-m-d H:i:s"));
+
+        // $data['profile_pic'] = "";
+      if($req->hasFile('profile_pic')){
+
+        $extension = Input::file('profile_pic')->getClientOriginalExtension(); 
+        $destinationPath = base_path('/') . '/public/uploads/profile';
+        $profileImage = round(microtime(true)).'.'.$extension;
+        Input::file('profile_pic')->move($destinationPath, $profileImage);
+        $data['profile_pic']=$profileImage;
+
+      }
+      
+      $data1 = array_filter($data);
+      
+      if($data1){
+        $result = DB::table('users')->where('id', $req->user_id)->update($data1);
+      }
+    }
+
+    if($result){
+
+      $interest = $req->input('interest', '');
+
+      if($interest){
+
+        $interest_id = explode(',', $interest);
+
+        DB::table('user_interests')->where(['user_id' => $req->user_id])->update(['status' => '0']);
+
+        foreach ($interest_id as $key => $value) {
+          
+          $user_interest_id = DB::table('user_interests')->where(['user_id' => $req->user_id, 'interest_id' => $value])->first();
+
+          if($user_interest_id){
+            DB::table('user_interests')->where(['id' => $user_interest_id->id])->update(['status' => '1']);
+          }else{
+
+            $interest_data = array(
+                                'user_id'     => $req->user_id,
+                                'interest_id' => $value,
+                                'updated_at'  => date('Y-m-d H:i:s'),
+                                'created_at'  => date('Y-m-d H:i:s'));
+
+            DB::table('user_interests')->insert($interest_data);
+
+          }
+        }
+      }
+
+      $work_place = $req->work_place;
+
+      if($work_place){
+
+        $work_place_id = explode(',', $work_place);
+
+        DB::table('user_workplaces')->where(['user_id' => $req->user_id])->update(['status' => '0']);
+
+        foreach ($work_place_id as $key => $value) {
+          
+          $user_interest_id = DB::table('user_workplaces')->where(['user_id' => $req->user_id, 'workplace_id' => $value])->first();
+
+          if($user_interest_id){
+            DB::table('user_workplaces')->where(['id' => $user_interest_id->id])->update(['status' => '1']);
+          }else{
+
+            $interest_data = array(
+                                'user_id'     => $req->user_id,
+                                'interest_id' => $value,
+                                'updated_at'  => date('Y-m-d H:i:s'),
+                                'created_at'  => date('Y-m-d H:i:s'));
+
+            DB::table('user_workplaces')->insert($interest_data);
+
+          }
+        }
+      }
+
+      return response(array('message'=>'Profile create Successfully'), SUCCESS)->header('Content-Type', 'application/json');  
+    }else{
+      return response(array('message'=>'Failed to create profile'), BAD_REQUEST)->header('Content-Type', 'application/json');
+    }
+  }
+
+  public function getProfile(Request $request){
+
+    if(!$request->header('token')){/* check token send--*/
+      
+      return response(array('error' => 'Token not found'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }
+    
+    $token = $request->header('token'); 
+    $userId = $this->webservice->getUserIdFromToken($token);
+ 
+    if(!$userId){
+
+        /* check user id with token valid */
+      return response(array('error' => 'Invalid token'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }
+
+    $profile = $this->webservice->getProfile($userId);
+
+    if($profile){
+
+      return response(array('message'=>'Get profile successfully.','data' => $profile), SUCCESS)->header('Content-Type', 'application/json');
+
+    }else{
+
+      return response(array('message'=>'No matched found'), NO_CONTENT)->header('Content-Type', 'application/json');
+
+    }
+  }
+
+
+  public function getOtherProfile(Request $request){
+
+    if(!$request->header('token')){/* check token send--*/
+      
+      return response(array('error' => 'Token not found'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }
+    
+    $token = $request->header('token'); 
+    $userId = $this->webservice->getUserIdFromToken($token);
+ 
+    if(!$userId){
+
+        /* check user id with token valid'--*/
+      return response(array('error' => 'Invalid Token'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }
+
+    $profile = $this->webservice->getProfile($request->other_user_id);
+
+    if($profile){
+
+      return response(array('message'=>'Get profile successfully.','data' => $profile), SUCCESS)->header('Content-Type', 'application/json');
+
+    }else{
+
+      return response(array('message'=>'No matched found'), NO_CONTENT)->header('Content-Type', 'application/json');
+      
+    }
+
+  }
+
+
+  public function deleteAccount(Request $request){
+
+    if(!$request->header('token')){/* check token send--*/
+      
+      return response(array('error' => 'Token not found'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }
+    
+    $token = $request->header('token'); 
+    $userId = $this->webservice->getUserIdFromToken($token);
+ 
+    if(!$userId){
+
+        /* check user id with token valid'--*/
+      return response(array('error' => 'Invalid Token'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }
+
+    $profile = DB::table('users')->where('id', $userId)->update(array('delete_account' => '1', 'updated_at' => date('Y-m-d h:i:s')));
+
+    if($profile){
+
+      return response(array('message'=>'Delete account successfully.'), SUCCESS)->header('Content-Type', 'application/json');
+
+    }else{
+
+      return response(array('message'=>'No matched found'), NO_CONTENT)->header('Content-Type', 'application/json');
+      
+    }
+
+  }
+
+  public function disableAccount(Request $request){
+
+    if(!$request->header('token')){/* check token send--*/
+      
+      return response(array('error' => 'Token not found'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }
+    
+    $token = $request->header('token'); 
+    $userId = $this->webservice->getUserIdFromToken($token);
+ 
+    if(!$userId){
+
+        /* check user id with token valid'--*/
+      return response(array('error' => 'Invalid Token'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }
+
+    $profile = DB::table('users')->where('id', $userId)->update(array('disable_account' => '1', 'updated_at' => date('Y-m-d h:i:s')));
+
+    if($profile){
+
+      return response(array('message'=>'Account disable successfully.'), SUCCESS)->header('Content-Type', 'application/json');
+
+    }else{
+
+      return response(array('message'=>'No matched found'), NO_CONTENT)->header('Content-Type', 'application/json');
+      
+    }
+
+  }
+
+    /**************************************/
+    /*       Suggestions ****************/
+    /************************************/
+  public function getSuggestions(Request $request){
+  
+    if(!$request->header('token')){/* check token send--*/
+      
+      return response(array('error' => 'Token not found'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }
+    
+    $token = $request->header('token'); 
+    $userId = $this->webservice->getUserIdFromToken($token);
+ 
+    if(!$userId){
+
+        /* check user id with token valid'--*/
+      return response(array('error'=>'Invalid Token'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }
+
+      /* check how many suggestions are seen by user--*/
+    $getSuggestionUsed = $this->webservice->getSuggestionUsed($userId);
+    
+    if($getSuggestionUsed >= 10){
+      
+      /* Get the next date for which suggestion enabled--*/
+      $getNextSuggestionTime = DB::table("user_suggestion")
+                        ->where("user_id",$userId)
+                        ->first();
+
+      $currentDateTime = date("Y-m-d H:i:s");
+      $next_suggesion_date = $getNextSuggestionTime->next_suggesion_date;
+      
+        /* calculate remaning time--*/
+      /*if(strtotime($next_suggesion_date) > strtotime($currentDateTime)){
+        $start = date_create($currentDateTime);
+        $end   = date_create($next_suggesion_date);
+        $diff  = date_diff($end,$start);
+   
+        $hours   = $diff->h < 10 ? "0".$diff->h : $diff->h;
+        $minutes = $diff->i < 10 ? "0".$diff->i : $diff->i;
+        $seconds = $diff->s < 10 ? "0".$diff->s : $diff->s;
+        
+        return response(array('message'=>'Your suggested matches for the day are over now','data' =>['hours' =>$hours, "minutes" => $minutes, "seconds" => $seconds]), LIMIT_REACHED)->header('Content-Type', 'application/json');
+      }else{
+        DB::table('user_suggestion')->where("user_id",$userId)->delete();
+      }*/
+    }
+
+    $getBlockedUsers = $this->webservice->getBlockedUsers($userId);
+        
+        /*Get random user id--*/
+    $suggestionId = DB::table('users')
+                  ->where('id','!=',$userId)
+                  ->whereNotIn('id', $getBlockedUsers)
+                  ->select('id as suggested_id')
+                  ->orderByRaw("RAND()")->first();
+
+    if(empty($suggestionId)){ /* if no user found to show--*/
+      
+      return response(array('message'=>'No matched found'), NO_CONTENT)->header('Content-Type', 'application/json');
+    }
+
+      //echo $request->header('token');
+    $suggested_id = $suggestionId->suggested_id;
+    $userArray = [];
+    $getUserDetails = $this->webservice->getSuggestedUserDetails($suggested_id);
+    $userArray['user_details'] = $getUserDetails;
+    $userArray['user_details']->my_goals = "Lorium ipsum simple dummy text";
+    $userArray['user_details']->location = "Chandigarh, India";
+
+    $userInterests   = $this->webservice->getSuggestedUserInterests($suggested_id);
+    $userArray['user_interests'] = $userInterests;
+
+    $suggestionUsed = $this->webservice->suggestonUsed($userId);
+
+    return response(array('message'=>'Suggesion detail','data'=>$userArray), SUCCESS)->header('Content-Type', 'application/json');  
+  }
+
+
+/*****************************************/
+/*-----------------Match-----------------*/
+/****************************************/
+public function matchUser($userId,Request $req){
+
+      $validator = validator::make($req->all(),[
+         'status'    => 'required',
+         'other_user_id'    => 'required'
+        ]
+      );
+
+      if ($validator->fails()) {          
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+    }else{
+      $userId           = $userId;
+      $matching_user_id = $req->other_user_id;
+      $status           = $req->status;
+
+      $insertMatching = $this->webservice->insertMatching($userId,$matching_user_id,$status);
+      if($insertMatching == "409"){
+        return response(array('message'=>'Matched request already sent'), ALREADY_EXIST)->header('Content-Type', 'application/json');  
+      }else{
+        /* Push Notifications of match request have to implement here--*/
+
+
+        /* status=>0 new match request sent, 1=> Matched, 2=>Match canceled--*/
+        return response(array('message'=>'Match request sent'), SUCCESS)->header('Content-Type', 'application/json');  
+      } 
+    }
+}
+
+/*****************************************/
+/*********Reports Profile------------*/
+/*****************************************/
+function reportUser($userId,Request $req){
+
+   $validator = validator::make($req->all(),[
+         'other_user_id'    => 'required',
+        ]
+      );
+
+   if ($validator->fails()) {          
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+    }else{
+      $reportMessage = $req->input('message', '');
+      $other_user_id = $req->input('other_user_id');
+
+      $reportUser = $this->webservice->reportUser($userId,$other_user_id,$reportMessage);
+      if($reportUser){
+         return response(array('message'=>'Reported Successfully'), SUCCESS)->header('Content-Type', 'application/json');  
+      }else{
+         return response(array('message'=>'Failed to report,Try again'), BAD_REQUEST)->header('Content-Type', 'application/json');  
+      }
+    }
+  }
+
+    /************************************/
+    /* Send Message */
+    /**************************************/
+  public function send_message(Request $request)
+  {
+
+	  $validator = validator::make($req->all(),[
+                    'sender_id'     => 'required',
+                    'reciver_id'    => 'required',
+                    'message'       => 'required']);
+    
+    if ($validator->fails()) {          
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+    }else{
+
+      $sender_id   = $request->input('sender_id');
+      $receiver_id = $request->input('reciver_id');
+      $message     = $request->input('message');
+
+      $result=$this->webservice->checkConnection($sender_id,$receiver_id);
+       
+      if(!empty($result)){
+        $connection_id=$result->id;
+      }else{
+        $this->webservice->add_connection($sender_id,$receiver_id);
+      }
+
+      $result=$this->webservice->checkConnection($sender_id,$receiver_id);
+      if(!empty($result)){
+        $connection_id=$result->id;
+        $this->webservice->insert_message($sender_id,$message,$connection_id);
+      }
+         
+      return response(array('message'=>'Data save succssfully'), SUCCESS)->header('Content-Type', 'application/json');  
+    }
+  }
+
+    /******************************/
+    /*get My Connection*/
+    /******************************/
+  public function getMyConnection($user_id){
+      
+    $data = DB::table('connection')
+                   ->where('del','!=',$user_id)
+                   ->where('del','!=','on')
+                   ->where('sender_id',$user_id)
+                   ->orwhere('reciver_id',$user_id)
+                   ->select('*')
+                   ->get();
+
+    $mydata=array();
+
+    foreach ($data as  $value) {
+      
+      $sender_id = $value->sender_id;
+      
+      if($sender_id == $user_id){
+        
+        $userInfo = $this->webservice->getUserInfo($value->reciver_id);
+
+        $myconnection['connection_id'] = $value->id;
+                   
+        if(!empty($userInfo)){
+          $myconnection['name'] = $userInfo->user_name;
+          
+          if(!empty($userInfo->profile_picture)){
+            
+            $myconnection['profile_picture'] = URL('/').'/public/uploads/profile/'.$userInfo->profile_picture;
+          }else{
+            $myconnection['profile_picture'] = "";
+          }
+
+          $mydata[]=$myconnection;
+        }
+      
+      }else{
+        
+        $myconnection['connection_id']=$value->id;
+        $userInfo=$this->webservice->getUserInfo($value->sender_id);
+
+        if(!empty($userInfo)){
+
+          $myconnection['name'] = $userInfo->user_name;
+          
+          if(!empty($userInfo->profile_picture)){
+
+            $myconnection['profile_picture'] = URL('/').'/public/uploads/profile/'.$userInfo->profile_picture;
+
+          }else{
+
+            $myconnection['profile_picture'] = "";
+          }
+
+          $mydata[]=$myconnection;
+        }
+      }
+    }
+
+    return response(array('message'=>'Data found','data'=>$mydata), SUCCESS)->header('Content-Type', 'application/json');    
+  }
+
+
+      /****************************/
+      /*jobNotification */
+      /****************************/
+  public function jobNotification($job_id,$sp_id){
+    
+    $data = DB::table('post_services')->where('id',$job_id)->select('user_id','services_id')->get();
+    
+    foreach ($data as $k => $value) {
+
+      $moreservices = $this->getOtherServices($value->services_id);
+      $data[$k]->more_services = $moreservices;
+
+    }
+
+    $sp_data = DB::table('serviceprovider_profiles')->where('user_id',$sp_id)->select('first_name','last_name')->first();
+
+    $message = $sp_data->first_name.' '.$sp_data->last_name.' assigned for your booking appoitment.';
+    $label = "job_forword";
+    $type  = 'U';
+    $sender_id = $sp_id;
+
+    $this->Sent_notification($data[0]->user_id,$sender_id,$label,$message,$type);
+
+    return true;
+  }
+
+
+    /*********************/
+    /* Time Ago */
+    /********************/
+  function timeago($time_ago){
+
+    $time_ago = strtotime($time_ago);
+    $cur_time   = strtotime(date('Y-m-d H:i:s'));
+    $time_elapsed   = $cur_time - $time_ago;
+    $seconds    = $time_elapsed ;
+    $minutes    = round($time_elapsed / 60 );
+    $hours      = round($time_elapsed / 3600);
+    $days       = round($time_elapsed / 86400 );
+    $weeks      = round($time_elapsed / 604800);
+    $months     = round($time_elapsed / 2592000);
+    $years      = round($time_elapsed / 31536000);
+        
+      // Seconds
+    if($seconds <= 60){
+      return "just now";
+    }
+    //Minutes
+    else if($minutes <=60){
+      if($minutes==1){
+        return "one min ago";
+      }else{
+        return "$minutes min ago";
+      }
+    }
+    //Hours
+    else if($hours <=24){
+      if($hours==1){
+        return "an hour ago";
+      }else{
+        return "$hours hours ago";
+      }
+    }
+      //Days
+    else if($days <= 7){
+        if($days==1){
+        return "yesterday";
+        }else{
+        return "$days days ago";
+        }
+    }
+      //Weeks
+    else if($weeks <= 4.3){
+      if($weeks==1){
+      return "1 week ago";
+      }else{
+      return "$weeks weeks ago";
+      }
+    }
+      //Months
+    else if($months <=12){
+        if($months==1){
+        return "1 month ago";
+        }else{
+        return "$months months ago";
+        }
+    }
+    //Years
+    else{
+      if($years==1){
+      return "1 year ago";
+      }else{
+      return "$years years ago";
+      }
+    }
+  }  
+
+    /******************************
+      Get Notification List
+    ********************************/
+  function get_notification_list($user_id,$token){
+      
+    $this->GetCheckToken($user_id,$token);
+
+    $get_noti = DB::table('notifications')
+                      ->where('status','=',1)
+                      ->where('receiver_id','=',$user_id)
+                      ->orderBy('id', 'desc')
+                      ->get();
+            
+    foreach ($get_noti as $key => $value) {
+      $get_noti[$key]->timeago=$this->timeago($value->created_at);
+    }
+
+    if($get_noti){
+
+      return response(array('message' => 'Data found', 'data' => $get_noti), SUCCESS)->header('Content-Type', 'application/json'); 
+
+    }else{
+
+      return response(array('message' => 'Data not found'), BAD_REQUEST)->header('Content-Type', 'application/json');
+
+    }
+  }
+
+    /*---------------------------------
+    Update Notification status
+    -----------------------------------*/
+  public function notification_on_off(Request $req){
+    
+    $validator = Validator::make($req->all(),[
+                  'user_id'              => 'required',
+                  'notification_status'  => 'required']);   
+    
+    if ($validator->fails()) {      
+       
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+      
+    }else{
+
+      $this->GetCheckToken(Input::get('user_id'),$req->header('token'));  
+              
+      $User = new User();
+      $User = User::find($req->user_id); 
+      $User->notification_status = $req->input('notification_status');
+
+      if($User->save()){  
+        return response(array('message' => 'Toggel on Successfully'), SUCCESS)->header('Content-Type', 'application/json');    
+      }else{
+
+        return response(array('message' => 'Failed to on Toggel'), BAD_REQUEST)->header('Content-Type', 'application/json');    
+      }
+    }
+  }
+
+
+    /*---------------------------------
+      Change Password
+    -----------------------------------*/
+  public function changePassword(Request $req){
+
+    $validator    =   Validator::make($req->all(),[
+                      'old_password'         => 'required',
+                      'new_password'         => 'required']);   
+    
+    if ($validator->fails()) {      
+       
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+      
+    }
+
+
+    if(!$req->header('token')){/* check token send--*/
+      
+      return response(array('error' => 'Token not found'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }
+    
+    $token = $req->header('token'); 
+    $userId = $this->webservice->getUserIdFromToken($token);
+ 
+    if(!$userId){
+
+        /* check user id with token valid'--*/
+      return response(array('error' => 'Invalid Token'), UNAUTHORIZED)->header('Content-Type', 'application/json');
+    }
+
+    $User     =     new User();
+    $User     =     User::find($userId);
+
+    if($User->register_type == 'O'){
+        
+      $pass    =   $req->input('old_password');
+        
+      if (Hash::check($pass, $User->password)) {
+
+        $pass        =   $req->input('new_password');
+        $password    =   Hash::make($pass);
+        $User->password = $password;
+
+        if($User->save()){
+
+          return response(array('message' => 'Password update successfully'), SUCCESS)->header('Content-Type', 'application/json'); 
+
+        }else{
+
+          return response(array('message' => 'Failed to update.'), BAD_REQUEST)->header('Content-Type', 'application/json');    
+        }
+
+      }else{
+
+        return response(array('message' => 'Old password is not matched.'), BAD_REQUEST)->header('Content-Type', 'application/json');
+      }
+
+    }else{
+
+      return response(array('message' => 'This is a social account'), BAD_REQUEST)
+                ->header('Content-Type', 'application/json');    
+    }
+  }
+
+    /*---------------------------------
+    Subscription Plan
+    -----------------------------------*/
+  public function subscriptionPlan(Request $req){
+
+    $validator    =   Validator::make($req->all(),[
+                      'user_id'              => 'required']
+                      );   
+    
+    if ($validator->fails()) {      
+       
+      return   response(['error' => $validator->errors()->first()], BAD_REQUEST)
+              ->header('Content-Type', 'application/json');
+      
+    }else{
+
+      $this->GetCheckToken(Input::get('user_id'),$req->header('token'));
+
+      $result =  $this->webservice->subscriptionPlan();
+      return response(array('message' => 'Data found', 'data' => $result), SUCCESS)
+              ->header('Content-Type', 'application/json');          
+    }
+
+  }
+
+    /*---------------------------------
+      notification  (for on of notification)
+    -----------------------------------*/
+  public function notification(Request $req){
+
+    $validator  = Validator::make($req->all(),[
+                      'user_id'              => 'required',
+                      'notification_status'  => 'required']);   
+    
+    if ($validator->fails()) {      
+       
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+      
+    }else{
+
+      $this->GetCheckToken(Input::get('user_id'),$req->header('token'));
+      $User     =     new User();
+      $User     =     User::find($req->user_id);
+      $User->notification_status = $req->input('notification_status');
+
+      if($User->save()){ 
+
+        return response(array('message' => 'Notification status update successfully.'), SUCCESS)->header('Content-Type', 'application/json');    
+      
+      }else{
+
+        return response(array('message' => 'Failed to update.'), BAD_REQUEST)->header('Content-Type', 'application/json');    
+      } 
+    }
+  }
+
+    /*---------------------------------
+      blockUser  
+    -----------------------------------*/
+  public function blockUser(Request $req){
+    
+    $validator  = Validator::make($req->all(),[
+                      'status'               => 'required',
+                      'other_user_id'        => 'required']);   
+    
+    if ($validator->fails()) {      
+      
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+
+    }else{
+
+      $token = $req->header('token'); 
+      $userId = $this->webservice->getUserIdFromToken($token);
+
+      $data['user_id']          =  $userId;
+      $data['other_user_id']    =  $req->input('other_user_id');
+      $data['status']           =  $req->input('status');
+
+      $result =  $this->webservice->blockUser($data);
+      
+      if($data['status'] == 0){
+        
+        return response(array('message' => 'Blocked'), SUCCESS)->header('Content-Type', 'application/json');
+      }else{
+
+        return response(array('message' => 'Unblocked'), SUCCESS)->header('Content-Type', 'application/json');          
+      }   
+    }
+  }
+
+    /*---------------------------------
+    contactUs  
+    -----------------------------------*/
+  public function contactUs(Request $req){
+
+    $validator    =   Validator::make($req->all(),[
+                      'user_id'             => 'required',
+                      'email'               => 'required',
+                      'subject'             => 'required',
+                      'message'             => 'required']
+                      );   
+    
+    if ($validator->fails()) {      
+       
+      return response(['error' => $validator->errors()->first()], BAD_REQUEST)
+              ->header('Content-Type', 'application/json');
+      
+    }else{
+
+      $data['user_id']          =  $req->input('user_id');
+      $data['email']            =  $req->input('email');
+      $data['subject']          =  $req->input('subject');
+      $data['message']          =  $req->input('message');
+      $tablename                =   'contact_us';
+        
+      $result =  $this->webservice->insertdata($tablename,$data);
+      
+      return response(array('message' => 'message send successfully'), SUCCESS)
+                ->header('Content-Type', 'application/json');
+
+    }
+  }
+
+    /*---------------------------------
+    contactUs  
+    -----------------------------------*/
+  public function articleList(Request $req){
+
+    $data = DB::table('articles')->where('status', '1')->select('*', DB::raw("CASE WHEN image is NULL OR image = '' THEN CONCAT('',image) ELSE CONCAT('".url('/').'/public/uploads/article/'."',image) END AS image"))->get();
+
+    if(!$data->isEmpty()){
+      return response(array('message' => 'Get articles successfully', 'data' => $data), SUCCESS)
+                ->header('Content-Type', 'application/json');
+    }else{
+      return response(['message' => 'No result found'], NO_CONTENT)->header('Content-Type', 'application/json');
+    }
+    
+  }
+
+    /*---------------------------------
+      contactUs  
+    -----------------------------------*/
+  public function articleDetails(Request $req){
+
+    $data = DB::table('articles')->where(['status' => '1', 'id' => $req->article_id])->select('*', DB::raw("CASE WHEN image is NULL OR image = '' THEN CONCAT('',image) ELSE CONCAT('".url('/').'/public/uploads/article/'."',image) END AS image"))->first();
+    
+    if($data){
+      return response(array('message' => 'Get article successfully', 'data' => $data), SUCCESS)
+                ->header('Content-Type', 'application/json');
+    }else{
+      return response(['message' => 'No result found'], NO_CONTENT)->header('Content-Type', 'application/json');
+    }
+  }
+      
+}

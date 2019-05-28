@@ -1,0 +1,106 @@
+<?php
+
+use Illuminate\Http\Request;
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| is assigned the "api" middleware group. Enjoy building your API!
+|
+*/
+
+Route::middleware('auth:api')->get('/user', function (Request $request) {
+    return $request->user();
+});
+
+Route::get('/webservice', function () {
+    return view('v1.webservices');
+});
+
+Route::get('/view', function () {
+    return view('v1.view');
+});
+
+
+Route::get('/privacy_policy', function () {
+    return view('v1.privacy_policy');
+});
+
+
+Route::get('/check_version', function () {
+     $laravel = app();
+  	echo $laravel::VERSION;
+});
+
+
+Route::group(['prefix' => ''], function() {
+	// Response Status Code //
+	define('SUCCESS', '200');
+	define('NO_CONTENT', '204');
+	define('UNAUTHORIZED', '401');
+	define('BAD_REQUEST', '400');
+	define('NOT_FOUND', '404');
+	define('UPGRADE', '426');
+	define('NOT_ACCEPTABLE', '406');
+	define('LIMIT_REACHED', '429');
+	define('ALREADY_EXIST', '409');
+});
+
+
+
+Route::group(['prefix' => 'v1'], function() {
+
+	Route::post('signup','v1\UserController@signup')->name('signup');
+	Route::post('socialSignup','v1\UserController@socialSignup')->name('socialSignup');
+	Route::any('login','v1\UserController@login')->name('login');
+	Route::any('logout','v1\Usercontroller@logout')->name('logout');
+	Route::any('forgotPassword','v1\UserController@forgotPassword')->name('forgotPassword');
+	/* tokens start Here--*/
+
+	//Route::middleware(["checkProvider"])->group(function(){
+
+	Route::any('getInterest','v1\UserController@getInterest')->name('getInterest');
+	Route::get('getWorkplace','v1\UserController@getWorkplace')->name('getWorkplace'); 
+
+
+	Route::any('getDays','v1\UserController@getDays')->name('getDays');
+	Route::any('getTimes','v1\UserController@getTimes')->name('getTimes');
+	//Route::get('resetPasswordForm/{token}','v1\Usercontroller@resetPasswordForm')->name('resetPasswordForm');
+	//Route::any('setNewPassword','v1\Usercontroller@setNewPassword')->name('setNewPassword');
+	Route::post('createProfile','v1\UserController@createProfile')->name('createProfile');
+	Route::post('addcard','v1\UserController@addcard')->name('addcard');
+	Route::post('addBank','v1\UserController@addBank')->name('addBank');
+	Route::get('userHome','v1\UserController@userHome')->name('userHome');
+	Route::any('services_details','v1\UserController@services_details')->name('services_details');
+	Route::post('post_service','v1\UserController@addNewService')->name('addNewService');
+	Route::post('getConfirmPost','v1\UserController@getConfirmPost')->name('getConfirmPost');
+	Route::post('addMoreServices','v1\UserController@addMoreServices')->name('addMoreServices');
+
+
+
+	/*After create profile-------*/
+	Route::get('/suggestions','v1\UserController@getSuggestions')->name('suggestions');
+	Route::post('/blockUser','v1\UserController@blockUser')->name('blockUser');  //for block a user
+	Route::post('users/{userId}/match','v1\UserController@matchUser')->name('match');  //for match
+	/*After create profile---*/
+	Route::post('users/{userId}/reports','v1\UserController@reportUser')->name('reports');
+
+
+	Route::get('getProfile','v1\UserController@getProfile')->name('getProfile');
+	Route::get('deleteAccount','v1\UserController@deleteAccount')->name('deleteAccount');
+	Route::get('disableAccount','v1\UserController@disableAccount')->name('disableAccount');
+	Route::post('getOtherProfile','v1\UserController@getOtherProfile')->name('getOtherProfile');
+
+	Route::post('changePassword','v1\UserController@changePassword')->name('changePassword');
+	Route::post('subscriptionPlan','v1\UserController@subscriptionPlan')->name('subscriptionPlan');
+	Route::post('notification','v1\UserController@notification')->name('notification');  //for on off notification
+	Route::post('contactUs','v1\UserController@contactUs')->name('contactUs');  //for on off notification
+	Route::get('articleList','v1\UserController@articleList')->name('articleList');  //for on off notification
+	Route::post('articleDetails','v1\UserController@articleDetails')->name('articleDetails');  //for on off notification
+
+	
+});

@@ -1,0 +1,41 @@
+@extends('adminpages/inner_template')
+@section('main')
+    <div class="row">
+		<div class="col-xs-12">
+         <!--    <h3 class="header smaller lighter blue">Users Listing</h3>
+                <div class="clearfix">
+					<div class="pull-right tableTools-container"></div>
+				</div> -->
+					<div class="table-header">
+						Results for "Payment transactions"
+					</div>
+               <div>
+	    	        <table id="user_table" class="table table-striped table-bordered table-hover">
+				       <thead>
+					     <tr>
+							<th width="30px">#</th>
+				                <th>Services name</th>
+				                <th>Transaction id</th>
+				                <th>Brand</th>
+								<th>Amount</th>
+							</tr>
+						</thead>
+
+						<tbody>
+				 			<?php $no=0; foreach($data as $datas){ ++$no; ?>
+			     		<tr>	
+                            <td>{{$no}}</td>	
+              				<td>{{$datas->services_name}}</td>  
+              				<td>{{$datas->stripe_transaction_id}}</td>  
+							<td>{{$datas->brand}}</td>	
+							<td>{{$datas->amount}}</td>	
+						
+                      </tr>                    
+            			<?php } ?>
+				
+				    </tbody>
+					</table>
+				</div>			
+			</div><!-- /.span -->
+		</div><!-- /.row -->
+@stop

@@ -1,0 +1,243 @@
+91d5ac.content-wrapper  #success_message{
+  color: #0f7904;
+  font-size: 16px;
+  text-align: center;
+}
+.login-box .login_warning{
+  color: #D61D4F;
+  font-size: 16px;
+  text-align: center;
+}
+/*.login-box, .register-box {
+  margin: 9% auto;
+  }*/
+.login-page {
+  background: #000;
+  height: 100vh;
+}
+.login-box {
+  margin: 0 auto !important;
+  text-align: center;
+  margin-top: 200px
+}
+.login-logo h1 {
+  margin: 0px;
+}
+.login-logo {
+  background: #ffb050 none repeat scroll 0 0;
+  border-radius: 10px 10px 0 0;
+  margin-bottom: 0px; 
+}
+.admin_loginbtn {
+    background-color: #ffb050;
+        border-color: #ffb050 !important;
+}
+ul.sidebar-menu li {
+    font-size: 15px;
+}
+.modal-header {
+    background: #ffb050 !important;
+    padding: 10px 15px !important;
+}
+.replymodalbtn {
+    background-color: #ffb050;
+    color: #444;
+    border-color: #ffb050;
+    width: 229px;
+}
+.box.changepass_box {
+    width: 600px;
+    padding: 20px;
+    box-shadow: 0px 1px 10px 0px;
+    margin: 0 auto;
+}
+.user-panel h4,.user-panel h5{
+	padding : 0;
+	margin:0;
+}
+.icon_inputs i {
+    position: absolute;
+    top: 13px;
+    left: 13px;
+    color: #008b95;
+    min-width: 16px;
+    text-align: center;
+    z-index: 2;
+}
+.user-footer .pull-left.profile{
+	margin-left:8%;
+}
+.change-passwordBtn {
+    margin-top: -8px;
+}
+.adminName {
+    width: 252px;
+    margin-left: 3px;
+}
+.user-panel {
+    padding: 28px 0 0 11px !important;
+    
+}
+.bt_delete{
+	margin-left: 457px;
+	width: 20% !important;	
+}
+label.star {
+  font-size: 20px !important;
+}
+div.stars {
+  width: 200px !important;
+}
+.login-box-body, .register-box-body {
+  padding: 20px 20px 10px;   
+}
+.loginback1 {
+  height: 100%;
+  display: table;
+  width: 100%;
+}
+
+
+img.logo-lg.adminLogos {
+    margin-top: 7px;
+    height: 50px;
+    width: 152px;
+    margin-left: 0px;
+}
+
+
+
+.btn-group > .btn + .dropdown-toggle {
+  /*height: 34px !important;*/
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.login-logo img {
+  height: 100px;
+  padding: 10px 0; 
+}
+td .btn{
+	margin-bottom: 5px;
+    min-width: 25px;
+    }
+td .btn i{
+	font-size:10px;
+    }
+.table {
+  table-layout: fixed;
+  word-wrap:break-word;
+}
+table.dataTable thead th, table.dataTable thead td {
+  padding: 0;
+}
+table.dataTable thead > tr > th,table.dataTable tbody> tr > td {
+  font-size: 12px;
+  padding-right: 0;
+}
+.btn-group .dropdown-menu {
+  left: -20px;
+}
+.error{
+ color : red;
+}
+.mob1 {
+    padding-left: 0;
+}
+.mob {
+    padding-right: 0;
+}
+
+
+.header_user_img {
+    max-width: none;
+    height: 42px;
+    width: 46px;
+}
+
+.dropdown.forword_job select {
+    width: 100%;
+    height: 33px;
+    margin-bottom: 20px;
+    margin-top: 15px;
+}
+.reason_viewlink{
+  cursor: pointer;
+}
+/* ******************* */
+span.stars, span.stars span {
+    display: block;
+    background: url(../../public/images/stars.png) 0 -16px repeat-x;
+    width: 80px;
+    height: 16px;
+}
+
+span.stars span {
+    background-position: 0 0;
+}
+
+.records{
+	padding: 10px;
+    font-size: 16px;
+
+}
+.pagging{
+	float: right;
+    margin-right: 50px;
+}
+
+.skin-blue .main-header .navbar {
+  height: 72px;
+    background-color: #51aa75 !important;
+}
+.skin-blue .main-header .logo {
+    background-color: #51aa75 !important;
+    height: 72px !important;
+}
+.skin-blue .main-header li.user-header {
+     background-color:  #51aa75 !important;
+}
+img.logo-lg {
+    width: 60px;
+    margin-left: 58px;
+}
+/* 21-09-2018 */
+.login_inner {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+ .login_sctn .login-logo, .login_sctn .login-box-body{
+    background-color: #91d5ac;
+}
+ .login_sctn .login-logo img {
+    width: 140px;
+    padding: 10px 0;
+	height: auto;
+}
+.login_sctn .login-logo h2 {
+    padding: 10px;
+    margin-bottom: 0px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+.login_sctn input {
+    line-height: 25px;
+    height: auto;
+    border-radius: 4px;
+}
+.login_sctn .login-box-body {
+    border-radius: 0px 0px 5px 5px;
+}
+.login_sctn .login-logo {
+    border-radius: 5px 5px 0 0;
+}
+.login_sctn .admin_loginbtn {
+    background-color: transparent;
+    color: #fff;
+	border-radius: 4px;
+    border: 2px solid #fff!important;
+}
+.login_sctn .login-logo {
+    margin-bottom: -2px;
+}
