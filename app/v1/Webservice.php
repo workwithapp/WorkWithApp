@@ -123,7 +123,7 @@ function suggestonUsed($userId){
 
   public function userProfile($userid){
     $profile = url('/').'/public/uploads/profile/';
-    $dummyProfile = $profile.'dummyprofile.jpg';
+    $dummyProfile = $profile.'dummyprofile.png';
     
     $data =  DB::table("users")
                 /*->leftjoin("days","days.id","=","users.day")
@@ -220,7 +220,7 @@ function suggestonUsed($userId){
   /*************** other user profile */
   public function otherUserProfile($userid){
     $profile = url('/').'/public/uploads/profile/';
-    $dummyProfile = $profile.'dummyprofile.jpg';
+    $dummyProfile = $profile.'dummyprofile.png';
     $data =  DB::table("users")
                  //->leftjoin("days","days.id","=","users.day")
                 //->leftjoin("times","times.id","=","users.time")
@@ -388,7 +388,7 @@ public function insertMatching($user_id,$matching_user_id,$status){
   /**********************************/
  public function getSuggestedUserDetails($suggested_id){
   $profile = url('/').'/public/uploads/profile/';
-  $dummyProfile = $profile.'dummyprofile.jpg';
+  $dummyProfile = $profile.'dummyprofile.png';
    $getUsers=DB::table('users')
                 ->leftJoin("workplace","workplace.id" ,'=', "users.work_place")
                 ->leftJoin("times","times.id","=","users.time")
@@ -687,7 +687,7 @@ public function insertMatching($user_id,$matching_user_id,$status){
 
   protected function GetUserName($userid){
     $profile = url('/').'/public/uploads/profile/';
-    $dummyProfile = $profile.'dummyprofile.jpg';
+    $dummyProfile = $profile.'dummyprofile.png';
     return DB::table("users")->where("id",$userid)->select("name",DB::raw("CASE WHEN profile_pic = '' OR profile_pic is null THEN '".$dummyProfile."' ELSE CONCAT('". $profile ."', profile_pic) END as profile_pic"))->first();
   }
   /*********************/
@@ -723,7 +723,7 @@ public function insertMatching($user_id,$matching_user_id,$status){
 
     public function get_lastMessage($userid){
       $profile = url('/').'/public/uploads/profile/';
-      $dummyProfile = $profile.'dummyprofile.jpg';
+      $dummyProfile = $profile.'dummyprofile.png';
 
       $ids = array();
       $query = DB::select("SELECT max(id) as ids FROM chats where (receiver_id = $userid or sender_id = $userid) group by sender_id");
@@ -788,7 +788,7 @@ public function insertMatching($user_id,$matching_user_id,$status){
     /******************** all match of user */
     public function getAllMatches($userid){
       $profile = url('/').'/public/uploads/profile/';
-      $dummyProfile = $profile.'dummyprofile.jpg';
+      $dummyProfile = $profile.'dummyprofile.png';
 
       return DB::table("matches")
                 //->join("users","users.id","=","matches.user_id")
@@ -810,7 +810,7 @@ public function insertMatching($user_id,$matching_user_id,$status){
     /******************** users which are blocked by current user */
     public function getBlockedUsers($userid){
       $profile = url('/').'/public/uploads/profile/';
-      $dummyProfile = $profile.'dummyprofile.jpg';
+      $dummyProfile = $profile.'dummyprofile.png';
 
       return DB::table("blocks")
                 ->leftjoin("users","users.id","=","blocks.other_user_id")
@@ -926,7 +926,7 @@ public function insertMatching($user_id,$matching_user_id,$status){
     
     if(!empty($long) && !empty($lat)) {
     $profile = url('/').'/public/uploads/profile/';
-    $dummyProfile = $profile.'dummyprofile.jpg';
+    $dummyProfile = $profile.'dummyprofile.png';
 
     $ByInterest = DB::table('users as u')
                   ->join('user_interests as i','u.id','=','i.user_id')
@@ -1195,7 +1195,7 @@ public function insertMatching($user_id,$matching_user_id,$status){
 
       $result =  $returnResult = "";
       $profile = url('/').'/public/uploads/profile/';
-      $dummyProfile = $profile.'dummyprofile.jpg';
+      $dummyProfile = $profile.'dummyprofile.png';
       if(!empty($lat) && !empty($long)) {
       $result =  DB::table('users as u')
                 ->leftjoin('user_interests as i','u.id','=','i.user_id')
@@ -1305,7 +1305,7 @@ public function getUserSuggestions($userId,$latLong){
     }
     
     $profile = url('/').'/public/uploads/profile/';
-    $dummyProfile = $profile.'dummyprofile.jpg';
+    $dummyProfile = $profile.'dummyprofile.png';
     $suggestion = DB::table("users as u");
     $suggestionI = null;
     if($lat && $long){

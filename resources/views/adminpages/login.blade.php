@@ -3,7 +3,7 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
     <meta charset="utf-8" />
-    <title>Touch Massage(admin)</title>
+    <title>Work with(admin)</title>
 
     <meta name="description" content="" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
@@ -28,11 +28,11 @@
 
   </head>
   <style type="text/css">
-    .loginback1{
+   /* .loginback1{
  background: url("<?php echo url('/')?>/public/static/login_bg.png");
  background-size: cover;
  background-repeat: no-repeat;
- }
+ }*/
   </style>
 
 <body class="hold-transition login-page">
@@ -43,7 +43,7 @@
       
       <div class="login-logo">
        <h2 style="color:#fff; padding:10px; margin-bottom: 0px;">Login</h2>
-	   <img class="logo_n" src="<?php echo url('/')?>/public/static/logo_img1.png">
+	   
       </div><!-- /.login-logo -->
       <div class="login-box-body">
 		 <div class="alert alert-danger" id="error" style="display:none;"></div>

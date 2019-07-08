@@ -25,7 +25,7 @@
 				 			<?php $no=0; foreach($data as $datas){ ++$no; ?>
 			     		<tr>	
                             <td>{{$no}}</td>	
-              				<td><a href="<?php echo url('/'); ?>/admin/getuserdetails/{{$datas->id}}/U">{{$datas->first_name}} {{$datas->last_name}}</a></td>  
+              				<td><a>{{$datas->name}}</a></td>  
               				<td>{{$datas->email}}</td>  
 							<td>{{$datas->address}}</td>	
 							<td>

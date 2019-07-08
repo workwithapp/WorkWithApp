@@ -389,6 +389,8 @@ public function getInterests(){
 
 
 
+
+
  public function getWorkplace(){
 
     $workplace = DB::table('workplace')->where('status', '1')->get(); 
@@ -1745,6 +1747,34 @@ function reportUser($userId,Request $req){
     }
   }
 
+
+  /*---------Report Bus---*/
+  function reportABug(Request $req){
+    $validator    =   Validator::make($req->all(),[
+                      'email'               => 'required',
+                      'subject'             => 'required',
+                      'message'             => 'required']
+                      );   
+    
+    if ($validator->fails()) {      
+       
+      return   response(['error' => $validator->errors()->first()], BAD_REQUEST)
+              ->header('Content-Type', 'application/json');
+      
+    }else{
+        $data['email']            =  $req->input('email');
+        $data['subject']          =  $req->input('subject');
+        $data['message']          =  $req->input('message');
+        $tablename     =   'report_bug';
+        
+        $result =  $this->webservice->insertdata($tablename,$data);
+          return response(array('message' => 'message send successfully'), SUCCESS)
+                ->header('Content-Type', 'application/json');
+
+    }
+  }
+
+
   /***********************************/
   /********* Send message ***********/
   /*********************************/
@@ -1970,7 +2000,7 @@ function reportUser($userId,Request $req){
    }else {
 
       $profile = url('/').'/public/uploads/profile/';
-      $dummyProfile = $profile.'dummyprofile.jpg';
+      $dummyProfile = $profile.'dummyprofile.png';
       $suggestion_id = array();
     $byInterests = $suggestion['byInterest'];
     $byDistance = $suggestion['byDistance'];
@@ -2174,6 +2204,36 @@ public function sendNotification($sender_id,$receiver_id){
     }else{
       return response(['message' => 'No result found'], NO_CONTENT)->header('Content-Type', 'application/json');
     }
+  }
+
+
+  /*Subscriptions--*/
+  public function subscriptions(Request $req){
+     $userId       = $this->webservice->getUserIdFromToken($req->header('token'));
+     $validator = Validator::make($req->all(), [  
+                'plan_id'                     => 'required',
+                'transation_id'                  => 'required'
+               
+      ]);
+
+      if ($validator->fails()) {
+        return response(['error' => $validator->errors()->first()], BAD_REQUEST)->header('Content-Type', 'application/json');
+      }else{
+         $planId = $req['plan_id'];
+         $transation_id = $req['transation_id'];
+
+         $checkAlreadySubscriptions = DB::table("subscribers")->where("user_id",$userId)->first();
+         if(empty($checkAlreadySubscriptions)){
+            DB::table("subscribers")->insert(['user_id' => $userId, 'plan_id' => $planId, 'transation_id' => $transation_id, 'subscribe_date'=> date("Y-m-d"), 'created_at' => date("Y-m-d H:i:s")]);
+            return response(array('message' => 'Subscriptions added successfully'), SUCCESS)
+              ->header('Content-Type', 'application/json'); 
+         }else{
+            DB::table("subscribers")->where("user_id",$userId)->update(['plan_id' => $planId, 'transation_id' => $transation_id, 'subscribe_date'=> date("Y-m-d"), 'created_at' => date("Y-m-d H:i:s") ]);
+            return response(array('message' => 'Subscriptions updated successfully'), SUCCESS)
+              ->header('Content-Type', 'application/json');
+         }
+         
+      }
   }
 
 

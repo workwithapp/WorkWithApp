@@ -122,8 +122,10 @@ Route::group(['prefix' => 'v1'], function() {
 	Route::post('contactUs','v1\UserController@contactUs')->name('contactUs');  //for on off notification
 	Route::get('articleList','v1\UserController@articleList')->name('articleList');  //for on off notification
 	Route::post('articleDetails','v1\UserController@articleDetails')->name('articleDetails');  //for on off notification
-
+	Route::post('report_bug','v1\UserController@reportABug')->name('report_bug');  //for on off notification
   	
+	Route::post("subscriptions",'v1\UserController@subscriptions')->name("subscriptions.store");
+
 
 	
 });

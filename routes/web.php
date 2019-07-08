@@ -23,6 +23,10 @@ Route::get('/', function () {
 
 Route::get('/home', 'HomeController@index')->name('home');
 
+Route::get("admin/contact_us","admin@contactUs");
+Route::get("admin/report_bugs","admin@reportBugs");
+
+
 Route::any('admin/','admin@dashboard');
 Route::any('admin/signin','admin@signin');
 Route::get('admin/login','admin@login');

@@ -104,8 +104,7 @@ class admin extends Controller
 		if (Auth::guest()){
 		 return redirect('/admin/login');
 		}
-		
-	  return view("/adminpages/dashboard");
+		return view("/adminpages/dashboard");
 	 }
 
 //*****************************************************//
@@ -118,17 +117,38 @@ class admin extends Controller
     }
     
     $datas['data'] = DB::table('users as u')
-         ->join('user_profiles as up','u.id','=','up.user_id')
-         ->where('u.user_type','=','U')
-         ->select('u.id','up.first_name','up.last_name','u.email','up.address','u.created_at','u.status')
-         ->orderBy('created_at','desc')
+         ->where('u.user_type','!=','A')
+         ->orWhereNull('u.user_type')
+         ->select('u.*')
+         ->orderBy('id','desc')
         ->get();
 
       return view("adminpages/users_list",$datas);
-      
-  
-    
-   }
+  }
+  public function contactUs(){
+    if (Auth::guest()){
+     return redirect('/admin/login');
+    }
+    $datas['data'] = DB::table('contact_us as c')
+         ->select('c.*')
+         ->orderBy('id','desc')
+        ->get();
+
+      return view("adminpages/contact_us",$datas);
+  }
+
+  /*--Report Bugs--*/
+  function reportBugs(){
+    if (Auth::guest()){
+     return redirect('/admin/login');
+    }
+    $datas['data'] = DB::table('report_bug as r')
+         ->select('r.*')
+         ->orderBy('id','desc')
+        ->get();
+
+      return view("adminpages/report_bugs",$datas);
+  }
    //*****************************************************//
 //           Get Service Provider list                  //
 //*****************************************************//
