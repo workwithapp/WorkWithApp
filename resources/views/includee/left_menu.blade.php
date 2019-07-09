@@ -10,13 +10,13 @@
 
     <div class="sidebar-shortcuts" id="sidebar-shortcuts">
 		<div class="sidebar-shortcuts-large" id="sidebar-shortcuts-large">
-            <a href="<?php echo url('/');?>/admin/report_management"><button class="btn btn-success" title="Report management">
+            <!-- <a href="<?php echo url('/');?>/admin/report_management"><button class="btn btn-success" title="Report management">
 				<i class="ace-icon fa fa-share"></i>
 			</button></a>
 
 			<a href="<?php echo url('/')?>/admin/adminAddCard"><button class="btn btn-info" title="Add credit card">
 				<i class="ace-icon fa fa-credit-card-alt"></i>
-			</button></a>
+			</button></a> -->
 
 			<a href="<?php echo url('/');?>/admin/get_users"><button class="btn btn-warning" title="users listing">
 				<i class="ace-icon fa fa-users"></i>
@@ -24,6 +24,10 @@
 
 			<a href="<?php echo url('/')?>/admin/change_password_view"><button class="btn btn-danger" title="change password">
 				<i class="ace-icon fa fa-key"></i>
+			</button></a>
+
+			<a href="<?php echo url('/');?>/admin/logout"><button class="btn btn-info" title="users listing">
+				<i class="ace-icon fa fa-sign-out"></i>
 			</button></a>
 		</div>
 
@@ -67,33 +71,43 @@
 								<b class="arrow"></b>
 							</li>
 
-							<li class="">
+				<!-- 			<li class="">
 								<a href="<?php echo url('/');?>/admin/get_spList">
 									<i class="menu-icon fa fa-caret-right"></i>
 									Service Provider
 								</a>
 
 								<b class="arrow"></b>
-							</li>
+							</li> -->
 							
 						</ul>
-				</li>
+				</li> 
              
             	<li class="">
-						<a href="<?php echo url('/');?>/admin/appointment_management">
+						<a href="<?php echo url('/');?>/admin/contact_us">
 							<i class="menu-icon fa fa-phone"></i>
-							<span class="menu-text"><small> View Appointments</small></span>
+							<span class="menu-text"><small> Contact Us</small></span>
 						</a>
 
 						<b class="arrow"></b>
 			    </li>
 
-            	<li class="">
+
+			    <li class="">
+						<a href="<?php echo url('/');?>/admin/report_bugs">
+							<i class="menu-icon"></i>
+							<span class="menu-text"><small> Report Bugs</small></span>
+						</a>
+
+						<b class="arrow"></b>
+			    </li>
+
+            	<!-- <li class="">
 						<a href="#" class="dropdown-toggle">
 							<i class="menu-icon fa fa-user"></i>
 							<span class="menu-text">
 								<small>Services</small>
-								<!-- <span class="badge badge-primary">5</span> -->
+							
 							</span>
 							<b class="arrow fa fa-angle-down"></b>
 						</a>
@@ -115,7 +129,7 @@
 								<b class="arrow"></b>
 							</li>		
 					</ul>
-				</li>
+				</li> -->
 
   	          <!--  <li class="">
 						<a href="<?php echo url('/');?>/admin/report_management">
@@ -125,13 +139,13 @@
 						<b class="arrow"></b>
 				</li> -->
 
-
+<!-- 
 	            <li class="">
 						<a href="#" class="dropdown-toggle">
 							<i class="menu-icon fa fa-cc-stripe"></i>
 							<span class="menu-text">
 								<small>Payment transactions</small>
-								<!-- <span class="badge badge-primary">5</span> -->
+								
 							</span>
 							<b class="arrow fa fa-angle-down"></b>
 						</a>
@@ -145,15 +159,9 @@
 								</a>
 								<b class="arrow"></b>
 							</li>
-						<!-- 	<li class="">
-								<a href="<?php echo url('/');?>/admin/view_services">
-									<i class="menu-icon fa fa-caret-right"></i>
-									Services List
-								</a>
-								<b class="arrow"></b>
-							</li>	 -->	
+						
 					</ul>
-				</li>
+				</li> -->
 
 
 

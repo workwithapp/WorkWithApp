@@ -10,8 +10,8 @@
 				<div class="footer-inner">
 					<div class="footer-content">
 						<span class="bigger-120">
-							<span class="blue bolder">Touch</span>
-							Massage &copy; 2018-2019
+							<span class="blue bolder">WorkWith</span>
+							 &copy; {{date("Y")}}
 						</span>
 
 					

@@ -17,7 +17,7 @@
 				                <th>Name</th>
 				                <th>Email</th>
 				                <th>Address</th>
-								<th>Action</th>
+								<th class="hide">Action</th> 
 							</tr>
 						</thead>
 
@@ -28,7 +28,7 @@
               				<td><a>{{$datas->name}}</a></td>  
               				<td>{{$datas->email}}</td>  
 							<td>{{$datas->address}}</td>	
-							<td>
+							<td class="hide">
 							<div class="btn-group">
 
 								<?php if($datas->status=='S'){
@@ -45,10 +45,10 @@
 								<span class="caret"></span>
 							  </button>
 
-							  <ul class="dropdown-menu" role="menu">
+							   <ul class="dropdown-menu" role="menu">
 					 
 								<li><a href="<?php echo url('/'); ?>/admin/changeStatus/{{$datas->id}}/{{$s_tatus}}/U" onclick="return confirm('Are you sure you want to <?php echo $result;?> this user?');"><?php echo $result;?></a></li>
-							  </ul>
+							  </ul> 
 							</div>
 							
 							</td>
